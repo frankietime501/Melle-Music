@@ -1,0 +1,50 @@
+const { SlashCommandBuilder, ContainerBuilder, SectionBuilder, TextDisplayBuilder, MessageFlags } = require('discord.js');
+
+module.exports = {
+    name: 'pause',
+    aliases: ['resume'],
+    description: 'Pause the current track',
+    data: new SlashCommandBuilder()
+        .setName('pause')
+        .setDescription('Pause the current track'),
+    async execute(client, message, args) {
+        try {
+            const isInteraction = !!message.options;
+            const guildId = isInteraction ? message.guildId : message.guild.id;
+            const member = message.member;
+
+            const player = client.manager.players.get(guildId);
+
+            const createResponse = (text, isError = false) => {
+                const container = new ContainerBuilder().addSectionComponents(
+                    new SectionBuilder().addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent(`${isError ? '> <:wrong:1508824698169983128> ' : '> <:check:1508822770866327724> '}${text}`)
+                    )
+                );
+                return { components: [container.toJSON()], flags: MessageFlags.IsComponentsV2 };
+            };
+
+            if (!player) {
+                const res = createResponse('<:blacklist:1508822704726216754> There is no music playing.', true);
+                return isInteraction ? message.reply(res) : message.reply(res);
+            }
+
+            const vc = member.voice.channel;
+            if (!vc || vc.id !== player.voiceId) {
+                const res = createResponse('<:blacklist:1508822704726216754> You need to be in the same voice channel as the bot.', true);
+                return isInteraction ? message.reply(res) : message.reply(res);
+            }
+
+            if (player.paused) {
+                const res = createResponse('<:blacklist:1508822704726216754> The player is already paused.', true);
+                return isInteraction ? message.reply(res) : message.reply(res);
+            }
+
+            player.pause(true);
+            const res = createResponse('<:check:1508822770866327724> Paused the current track.');
+            return isInteraction ? message.reply(res) : message.reply(res);
+        } catch (err) {
+            client.logger.error(`Pause Command Error: ${err.stack}`);
+        }
+    }
+};
